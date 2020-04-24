@@ -1,0 +1,218 @@
+<html>
+
+<head>
+  <title>Snake Game</title>
+  <style>
+    #container {
+      width: 300px;
+      height: 300px;
+      position: relative;
+    }
+
+    #board {
+      position: absolute;
+      border: 2px solid #000;
+    }
+
+    #score {
+      margin-top: 5px;
+      border: 2px solid #000;
+      width: 40px;
+    }
+
+    #overlay.overlay-animation {
+      opacity: 1;
+    }
+
+    #overlay {
+      position: absolute;
+      display: flex;
+
+      align-items: center;
+      justify-content: center;
+
+      border: 2px solid #000;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+
+      box-shadow: inset 0 0 0 100vw rgba(0, 0, 0, 0.800);
+      opacity: 0;
+      transition: opacity 2s ease-in-out;
+    }
+
+    .youdied {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 30px;
+      letter-spacing: -2px;
+      word-spacing: 2px;
+      color: red;
+      font-weight: normal;
+      text-decoration: none;
+      font-style: normal;
+      font-variant: normal;
+      text-transform: uppercase;
+      text-shadow: 1px 1px 1px rgba(119,0,0,0.5);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <canvas id="board" width="300" height="300"></canvas>
+    <div id="overlay">
+      <span class="youdied">You died!</span>
+    </div>
+  </div>
+  <input id="score" type="number" value="0" disabled/>
+
+  <script>
+    const INITIAL_SPEED = 170
+    const MAX_SPEED = 115
+    let speed = INITIAL_SPEED
+    let SnakeGame = {
+      pressedKeys: {
+        ArrowUp: false,
+        ArrowDown: false,
+        ArrowLeft: false,
+        ArrowRight: false
+      },
+      score: 0,
+      snake: {
+        direction: { x: 1, y: 0 },
+        chunks: [
+          { x: 4, y: 2 },
+          { x: 3, y: 2 },
+          { x: 2, y: 2 }
+        ],
+        eatsApple: this.eatsApple
+      },
+      apple: {}
+    }
+    let canvas = document.getElementById('board')
+    let context = canvas.getContext('2d')
+    context.scale(10, 10)
+
+    function clearBoard() {
+      context.clearRect(0, 0, canvas.width, canvas.height)
+    }
+
+    function eatsApple() {
+      SnakeGame.score += 5
+      generateNewApple()
+      speedUpSnake()
+      context.clearRect(SnakeGame.apple.x, SnakeGame.apple.y, 1, 1)
+      document.getElementById("score").value = SnakeGame.score
+    }
+
+    function speedUpSnake() {
+      if (speed == MAX_SPEED) return;
+      speed -= 5;
+    }
+
+    function generateNewApple() {
+      SnakeGame.apple.x = generateNewXPosition()
+      SnakeGame.apple.y = generateNewYPosition()
+    }
+
+    function generateNewXPosition() {
+      return Math.round(Math.random() * ((canvas.width / 10) - 1))
+    }
+
+    function generateNewYPosition() {
+      return Math.round(Math.random() * ((canvas.height / 10) - 1))
+    }
+
+    function stopGame() {
+      let overlay = document.getElementById('overlay')
+      overlay.classList.add('overlay-animation')
+      this.cancelAnimationFrame(SnakeGame.id)
+    }
+
+    function update() {
+
+      if (SnakeGame.pressedKeys.ArrowUp && SnakeGame.snake.direction.name !== 'down') {
+        SnakeGame.snake.direction.x = 0
+        SnakeGame.snake.direction.y = -1
+        SnakeGame.snake.direction.name = 'up'
+        SnakeGame.pressedKeys.ArrowUp = false
+      } else if (SnakeGame.pressedKeys.ArrowDown && SnakeGame.snake.direction.name !== 'up') {
+        SnakeGame.snake.direction.x = 0
+        SnakeGame.snake.direction.y = 1
+        SnakeGame.snake.direction.name = 'down'
+        SnakeGame.pressedKeys.ArrowDown = false
+      } else if (SnakeGame.pressedKeys.ArrowRight && SnakeGame.snake.direction.name !== 'left') {
+        SnakeGame.snake.direction.x = 1
+        SnakeGame.snake.direction.y = 0
+        SnakeGame.snake.direction.name = 'right'
+        SnakeGame.pressedKeys.ArrowRight = false
+      } else if (SnakeGame.pressedKeys.ArrowLeft && SnakeGame.snake.direction.name !== 'right') {
+        SnakeGame.snake.direction.x = -1
+        SnakeGame.snake.direction.y = 0
+        SnakeGame.snake.direction.name = 'left'
+        SnakeGame.pressedKeys.ArrowLeft = false
+      }
+
+      let head = {
+        x: SnakeGame.snake.chunks[0].x + SnakeGame.snake.direction.x,
+        y: SnakeGame.snake.chunks[0].y + SnakeGame.snake.direction.y
+      }
+
+      // Add new chunk to the beginning with the new position
+      SnakeGame.snake.chunks.unshift(head)
+
+      if (head.x === SnakeGame.apple.x && head.y === SnakeGame.apple.y) {
+        SnakeGame.snake.eatsApple()
+      } else if (this.hasHitWall(head) || this.hasSelfCollided(head)) {
+        stopGame()
+      } else {
+        // Remove the last chunk
+        SnakeGame.snake.chunks.pop()
+      }
+    }
+
+    function hasSelfCollided(head) {
+      for (let i = 1; i < SnakeGame.snake.chunks.length; i++) {
+        if (head.x === SnakeGame.snake.chunks[i].x && head.y === SnakeGame.snake.chunks[i].y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function hasHitWall(head) {
+      return head.x === -1 || head.x === canvas.width / 10 || head.y === -1 || head.y === canvas.height / 10
+    }
+
+    function draw() {
+      this.clearBoard()
+      context.fillStyle = 'black'
+      SnakeGame.snake.chunks.forEach(chunk => {
+        context.fillRect(chunk.x, chunk.y, 1, 1)
+      })
+
+      context.fillStyle = 'red'
+      context.fillRect(SnakeGame.apple.x, SnakeGame.apple.y, 1, 1)
+    }
+
+    ;(function () {
+      let start = Date.now()
+      SnakeGame.id = window.requestAnimationFrame(mainLoop)
+      generateNewApple()
+      function mainLoop() {
+        SnakeGame.id = window.requestAnimationFrame(mainLoop)
+        if (Date.now() - start >= speed) {
+          update()
+          draw()
+          start = Date.now()
+        }
+      }
+    })();
+
+    document.body.onkeyup = (e) => {
+      SnakeGame.pressedKeys[e.key] = true;
+    }
+  </script>
+</body>
+
+</html>
